@@ -27,7 +27,6 @@ import traceback
 from c3toc import C3TOCAPI
 from pretalx_api import PretalxAPI, ongoing_or_future_filter, max_duration_filter
 
-from PIL import Image
 from pprint import pprint
 from pyfis.oltmann import VistraI
 from pyfis.oltmann.utils import get_text_width
