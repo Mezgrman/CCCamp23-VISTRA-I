@@ -185,12 +185,24 @@ def main():
 
 
 if __name__ == "__main__":
+    backoff = 1
     while True:
         try:
+            start_time = time.time()
             main()
         except KeyboardInterrupt:
             break
         except:
             traceback.print_exc()
-            print("Restarting in 10 seconds")
-            time.sleep(10)
+            now = time.time()
+            run_time = now - start_time
+            print("Restarting in {} seconds".format(backoff))
+            time.sleep(backoff)
+            if run_time < 60:
+                # If program failed in less than 60 seconds, increase backoff time exponentially
+                # Limit it though
+                if backoff < 256:
+                    backoff *= 2
+            else:
+                # Otherwise, reset backoff back to 1
+                backoff = 1
