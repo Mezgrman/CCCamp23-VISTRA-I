@@ -35,7 +35,7 @@ from _config import *
 
 
 DISPLAY_MODES = [
-    "arr_dep_eta",
+    #"arr_dep_eta",
     "pretalx"
 ]
 
@@ -74,7 +74,6 @@ def main():
     toc = C3TOCAPI()
     pretalx = PretalxAPI("https://pretalx.c3voc.de/camp2023/schedule/export/schedule.json")
     display = VistraI(CONFIG_VISTRA_I_HOST, CONFIG_VISTRA_I_PORT)
-    display.clear_panel()
     display.set_brightness(128)
     
     tracks = toc.get_tracks()
@@ -87,6 +86,7 @@ def main():
             print("Handling mode: " + mode)
             utcnow = datetime.datetime.utcnow()
             now = datetime.datetime.now()
+            display.clear_panel()
             
             # Handle all background calculations and data operations
             
@@ -123,11 +123,12 @@ def main():
                     display.send_text(text="No Departures", font=12, x=0, y=0, width=display_width, height=display_height, effects=display.EFFECT_CENTERED | display.EFFECT_MIDDLE)
             elif mode == "pretalx":
                 # Display header
-                display.send_text(text="Trck", font=5, x=0, y=0, width=28, height=7, effects=None)
-                display.send_text(text="Location", font=5, x=26, y=0, width=70, height=7, effects=None)
-                display.send_text(text="Title", font=5, x=96, y=0, width=32, height=7, effects=None)
-                display.send_text(text="Starts in", font=5, x=238, y=0, width=50, height=7, effects=display.EFFECT_RIGHT)
-                display.send_image("line_hor.png", x=0, y=8)
+                display.send_text(text="Loc", font=4, x=0, y=0, width=24, height=7)
+                display.send_text(text="Title", font=4, x=27, y=0, width=45, height=7)
+                display.send_text(text="Time", font=4, x=75, y=0, width=26, height=7)
+                display.send_image("line_hor.png", x=0, y=6)
+                display.send_image("line_ver.png", x=25, y=0)
+                display.send_image("line_ver.png", x=73, y=0)
 
                 # Get schedule from pretalx
                 events = pretalx.get_all_events()
@@ -143,12 +144,14 @@ def main():
                 events = list(events)
 
                 if events:
-                    for i, event in enumerate(events[:3]):
+                    for i, event in enumerate(events[:5]):
                         start = dateutil.parser.isoparse(event['date']).replace(tzinfo=None)
                         delta = start - now
                         seconds = round(delta.total_seconds())
                         if seconds < 0:
-                            time_text = "{}m ago".format(round(-seconds / 60))
+                            time_text = "- {}m".format(round(-seconds / 60))
+                        elif seconds >= 36000:
+                            time_text = "{}h".format(round(seconds / 3600))
                         elif seconds >= 3600:
                             time_text = "{}h{}m".format(seconds // 3600, round((seconds % 3600) / 60))
                         else:
@@ -157,14 +160,15 @@ def main():
                         track_code = TRACK_CODES.get(event['track'], event['track'].upper()[:2])
                         room_text = ROOM_ABBREVIATIONS.get(event['room'], event['room'])
 
-                        y_base = 12 + i * 16
+                        y_base = 8 + i * 12
 
-                        display.send_text(text=track_code, font=10, x=0, y=y_base, width=24, height=16, effects=display.EFFECT_CENTERED | display.EFFECT_MIDDLE, effects3=display.EFFECT3_INVERTED)
                         room_text_width = get_text_width(room_text, 5)
-                        display.send_text(text=room_text, font=5, x=26, y=y_base+1, width=68, height=16, effects=(display.EFFECT_SCROLL if room_text_width > 68 else None))
+                        scroll = (room_text_width > 24)
+                        display.send_text(text=room_text + ("   " if scroll else ""), font=4, x=0, y=y_base+2, width=24, height=16, effects=(display.EFFECT_SCROLL if scroll else display.EFFECT_NONE))
                         title_width = get_text_width(event['title'], 10)
-                        display.send_text(text=event['title'], font=10, x=96, y=y_base+3, width=140, height=16, effects=(display.EFFECT_SCROLL if title_width > 140 else None))
-                        display.send_text(text=time_text, font=10, x=238, y=y_base+3, width=50, height=16, effects=display.EFFECT_RIGHT)
+                        scroll = (title_width > 45)
+                        display.send_text(text=event['title'] + ("        " if scroll else ""), font=10, x=27, y=y_base, width=45, height=16, effects=(display.EFFECT_SCROLL if scroll else display.EFFECT_NONE))
+                        display.send_text(text=time_text, font=4, x=75, y=y_base+2, width=26, height=16)
                 else:
                     display.send_text(text="No Events", font=12, x=0, y=0, width=display_width, height=display_height, effects=display.EFFECT_CENTERED | display.EFFECT_MIDDLE)
                     
